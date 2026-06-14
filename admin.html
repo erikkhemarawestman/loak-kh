@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Loak.kh — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{--cream:#FAFAF8;--cream2:#F2F0EC;--terra:#B84A24;--gold:#C9963A;--ink:#141210;--ink2:#3D342B;--ink3:#7A6E65;--ink4:#AFA9A2;--white:#fff;--border:#E5E0D8;--shadow:0 1px 3px rgba(20,18,16,.06),0 4px 12px rgba(20,18,16,.08);--green:#1a7a4a;--red:#c0392b;--blue:#1a5fa8;--purple:#6b2d8b}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Sora',sans-serif;background:#0f0e0d;color:var(--ink);min-height:100vh}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+#login-screen{position:fixed;inset:0;background:#0f0e0d;display:flex;align-items:center;justify-content:center;z-index:100}
+#login-screen.hidden{display:none}
+.login-box{background:var(--white);border-radius:20px;padding:40px;width:360px;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.4)}
+.login-logo{width:56px;height:56px;border-radius:16px;background:linear-gradient(145deg,var(--gold),var(--terra));display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 16px}
+.login-h{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--ink);margin-bottom:4px}
+.login-sub{font-size:13px;color:var(--ink3);margin-bottom:28px}
+.login-btn{width:100%;height:48px;background:var(--ink);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Sora',sans-serif;display:flex;align-items:center;justify-content:center;gap:10px;transition:opacity .2s;margin:0 auto}
+.login-btn:hover{opacity:.85}
+.login-btn:disabled{opacity:.5;cursor:not-allowed}
+.login-err{font-size:12px;color:var(--red);margin-top:12px}
+
+#admin{display:none}
+#admin.show{display:flex;min-height:100vh}
+
+.sidebar{width:230px;background:#1a1714;flex-shrink:0;display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:50}
+.sidebar-brand{padding:22px 18px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sidebar-logo{display:flex;align-items:center;gap:10px}
+.sidebar-icon{width:32px;height:32px;border-radius:9px;background:linear-gradient(145deg,var(--gold),var(--terra));display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.sidebar-name{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:#fff}
+.sidebar-badge{font-size:9px;color:rgba(255,255,255,.3);letter-spacing:2px;text-transform:uppercase;margin-top:1px}
+.sidebar-nav{padding:14px 10px;flex:1}
+.nav-section{font-size:9px;font-weight:700;color:rgba(255,255,255,.2);text-transform:uppercase;letter-spacing:2px;padding:8px 10px 4px;margin-top:6px}
+.nav-btn{width:100%;border:none;background:none;display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;cursor:pointer;color:rgba(255,255,255,.5);font-size:13px;font-weight:500;font-family:'Sora',sans-serif;transition:all .15s;text-align:left;margin-bottom:2px}
+.nav-btn:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.85)}
+.nav-btn.active{background:rgba(184,74,36,.18);color:#fff}
+.nav-ico{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.nav-badge{margin-left:auto;background:var(--terra);color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700}
+.sidebar-footer{padding:14px;border-top:1px solid rgba(255,255,255,.07)}
+.sidebar-user{display:flex;align-items:center;gap:10px}
+.sidebar-av{width:30px;height:30px;border-radius:50%;background:var(--terra);flex-shrink:0;background-size:cover;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700}
+.sidebar-uname{font-size:12px;font-weight:600;color:rgba(255,255,255,.6);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sidebar-signout{font-size:10px;color:rgba(255,255,255,.25);cursor:pointer;margin-top:1px}
+.sidebar-signout:hover{color:var(--terra)}
+
+.main{margin-left:230px;flex:1;background:var(--cream);min-height:100vh}
+.topbar{background:var(--white);border-bottom:1px solid var(--border);padding:13px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40}
+.topbar-title{font-family:'Playfair Display',serif;font-size:19px;font-weight:700;color:var(--ink)}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.topbar-btn{background:var(--cream2);border:1.5px solid var(--border);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;color:var(--ink2);cursor:pointer;font-family:'Sora',sans-serif;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+.topbar-btn:hover{background:var(--ink);color:#fff;border-color:var(--ink)}
+.content{padding:22px}
+
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.stat-card{background:var(--white);border-radius:16px;padding:18px;box-shadow:var(--shadow)}
+.stat-label{font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.stat-icon{font-size:18px}
+.stat-value{font-family:'Playfair Display',serif;font-size:30px;font-weight:700;color:var(--ink);letter-spacing:-1px}
+.stat-sub{font-size:11px;color:var(--ink4);margin-top:3px}
+
+.table-card{background:var(--white);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:18px}
+.table-hdr{padding:14px 18px;border-bottom:1px solid var(--cream2);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.table-title{font-size:14px;font-weight:700;color:var(--ink)}
+.table-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.search-mini{border:1.5px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;font-family:'Sora',sans-serif;outline:none;color:var(--ink);width:180px;transition:border-color .2s}
+.search-mini:focus{border-color:var(--terra)}
+.select-mini{border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;font-family:'Sora',sans-serif;outline:none;color:var(--ink);background:#fff}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:9px 16px;font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.8px;background:var(--cream);border-bottom:1px solid var(--cream2)}
+td{padding:11px 16px;font-size:13px;color:var(--ink2);border-bottom:1px solid var(--cream2);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(250,250,248,.7)}
+.td-img{width:38px;height:38px;border-radius:8px;object-fit:cover;background:var(--cream2);display:block;flex-shrink:0}
+.td-av{width:30px;height:30px;border-radius:50%;object-fit:cover;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700;flex-shrink:0}
+.badge{display:inline-flex;align-items:center;gap:3px;border-radius:5px;padding:2px 8px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+.bg{background:#e8f5ee;color:var(--green)}
+.br{background:#fdecea;color:var(--red)}
+.bo{background:#fef8e8;color:var(--gold)}
+.bb{background:#e8f0fb;color:var(--blue)}
+.bk{background:var(--cream2);color:var(--ink3)}
+.bp{background:#f3e8fb;color:var(--purple)}
+.action-btn{border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Sora',sans-serif;transition:all .15s;white-space:nowrap}
+.abr{background:#fdecea;color:var(--red)}.abr:hover{background:var(--red);color:#fff}
+.abg{background:#e8f5ee;color:var(--green)}.abg:hover{background:var(--green);color:#fff}
+.abk{background:var(--cream2);color:var(--ink3)}.abk:hover{background:var(--ink3);color:#fff}
+.abo{background:#fef8e8;color:var(--gold)}.abo:hover{background:var(--gold);color:#fff}
+.abp{background:#f3e8fb;color:var(--purple)}.abp:hover{background:var(--purple);color:#fff}
+.abb{background:#e8f0fb;color:var(--blue)}.abb:hover{background:var(--blue);color:#fff}
+.td-actions{display:flex;gap:5px;flex-wrap:wrap}
+.empty-row{text-align:center;padding:40px;color:var(--ink4);font-size:13px}
+.section{display:none}.section.active{display:block}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(20,18,16,.6);z-index:200;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay.show{display:flex}
+.modal-box{background:var(--white);border-radius:20px;padding:28px;width:480px;max-height:80vh;overflow-y:auto}
+.modal-h{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--ink);margin-bottom:6px}
+.modal-sub{font-size:13px;color:var(--ink3);margin-bottom:20px}
+.modal-label{font-size:11px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;margin-top:14px;display:block}
+.modal-input{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;font-size:14px;font-family:'Sora',sans-serif;color:var(--ink);outline:none;transition:border-color .2s}
+.modal-input:focus{border-color:var(--terra)}
+.modal-select{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;font-size:14px;font-family:'Sora',sans-serif;color:var(--ink);background:#fff;outline:none}
+.modal-footer{display:flex;gap:10px;margin-top:20px;justify-content:flex-end}
+.modal-cancel{background:var(--cream2);border:1.5px solid var(--border);border-radius:10px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--ink2);cursor:pointer;font-family:'Sora',sans-serif}
+.modal-submit{background:var(--ink);border:none;border-radius:10px;padding:10px 24px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:'Sora',sans-serif}
+
+/* CONVERSATION VIEW */
+.conv-msgs{max-height:300px;overflow-y:auto;background:var(--cream);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.msg-bubble{max-width:75%;padding:9px 13px;border-radius:14px;font-size:13px}
+.msg-bubble.left{background:#fff;border-radius:14px 14px 14px 4px;align-self:flex-start}
+.msg-bubble.right{background:var(--terra);color:#fff;border-radius:14px 14px 4px 14px;align-self:flex-end}
+.msg-meta{font-size:10px;opacity:.5;margin-top:3px}
+
+.spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--terra);border-radius:50%;animation:spin 1s linear infinite;margin:40px auto;display:block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;color:#fff;box-shadow:0 8px 24px rgba(0,0,0,.2);animation:toastIn .3s ease}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ANNOUNCE FORM */
+.announce-form{background:var(--cream);border-radius:14px;padding:18px;margin-bottom:18px}
+.type-btns{display:flex;gap:8px;margin-top:8px}
+.type-btn{flex:1;height:36px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Sora',sans-serif;background:#fff;color:var(--ink3);transition:all .2s}
+.type-btn.on{border-color:var(--terra);background:var(--terra);color:#fff}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">🏮</div>
+    <div class="login-h">Loak.kh Admin</div>
+    <div class="login-sub">Sign in with your admin Google account</div>
+    <button class="login-btn" id="login-btn">
+      <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+      Sign in with Google
+    </button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div id="admin">
+  <div class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">
+        <div class="sidebar-icon">🏮</div>
+        <div><div class="sidebar-name">Loak.kh</div><div class="sidebar-badge">Admin Panel</div></div>
+      </div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section">Overview</div>
+      <button class="nav-btn active" onclick="showSection('dashboard')"><span class="nav-ico">📊</span> Dashboard</button>
+      <div class="nav-section">Content</div>
+      <button class="nav-btn" onclick="showSection('listings')"><span class="nav-ico">📦</span> Listings</button>
+      <button class="nav-btn" onclick="showSection('users')"><span class="nav-ico">👥</span> Users</button>
+      <button class="nav-btn" onclick="showSection('reports')"><span class="nav-ico">🚨</span> Reports <span class="nav-badge" id="report-count">0</span></button>
+      <button class="nav-btn" onclick="showSection('reviews')"><span class="nav-ico">⭐</span> Reviews</button>
+      <div class="nav-section">Engagement</div>
+      <button class="nav-btn" onclick="showSection('announcements')"><span class="nav-ico">📢</span> Announcements</button>
+      <button class="nav-btn" onclick="showSection('messages')"><span class="nav-ico">💬</span> Messages</button>
+    </div>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-av" id="sidebar-av"></div>
+        <div style="flex:1;min-width:0"><div class="sidebar-uname" id="sidebar-name">Admin</div><div class="sidebar-signout" onclick="signOut()">Sign out</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="topbar-title">Dashboard</div>
+      <div class="topbar-right">
+        <a class="topbar-btn" href="https://loak-kh-git-main-khemara-s-projects.vercel.app" target="_blank">↗ Live site</a>
+        <button class="topbar-btn" onclick="refreshCurrent()">↻ Refresh</button>
+        <button class="topbar-btn" onclick="exportCSV()" id="export-btn" style="display:none">⬇ Export CSV</button>
+      </div>
+    </div>
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="section active" id="sec-dashboard">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-label">Total Users <span class="stat-icon">👥</span></div><div class="stat-value" id="stat-users">—</div><div class="stat-sub">Registered accounts</div></div>
+          <div class="stat-card"><div class="stat-label">Active Listings <span class="stat-icon">📦</span></div><div class="stat-value" id="stat-listings">—</div><div class="stat-sub">Items for sale</div></div>
+          <div class="stat-card"><div class="stat-label">Items Sold <span class="stat-icon">💰</span></div><div class="stat-value" id="stat-sold">—</div><div class="stat-sub">Completed sales</div></div>
+          <div class="stat-card"><div class="stat-label">Open Reports <span class="stat-icon">🚨</span></div><div class="stat-value" id="stat-reports">—</div><div class="stat-sub">Need attention</div></div>
+        </div>
+        <div class="table-card"><div class="table-hdr"><div class="table-title">Recent Listings</div></div><div id="recent-listings-body"><div class="spinner"></div></div></div>
+        <div class="table-card"><div class="table-hdr"><div class="table-title">Recent Users</div></div><div id="recent-users-body"><div class="spinner"></div></div></div>
+      </div>
+
+      <!-- LISTINGS -->
+      <div class="section" id="sec-listings">
+        <div class="table-card">
+          <div class="table-hdr">
+            <div class="table-title">All Listings</div>
+            <div class="table-actions">
+              <select class="select-mini" id="listing-status-filter" onchange="loadListings()">
+                <option value="">All statuses</option>
+                <option value="active">Active</option>
+                <option value="sold">Sold</option>
+                <option value="deleted">Deleted</option>
+              </select>
+              <input class="search-mini" id="listing-search" placeholder="Search…" oninput="filterListings()"/>
+            </div>
+          </div>
+          <div id="listings-body"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- USERS -->
+      <div class="section" id="sec-users">
+        <div class="table-card">
+          <div class="table-hdr">
+            <div class="table-title">All Users</div>
+            <div class="table-actions">
+              <input class="search-mini" id="user-search" placeholder="Search users…" oninput="filterUsers()"/>
+            </div>
+          </div>
+          <div id="users-body"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- REPORTS -->
+      <div class="section" id="sec-reports">
+        <div class="table-card">
+          <div class="table-hdr"><div class="table-title">Reports</div></div>
+          <div id="reports-body"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- REVIEWS -->
+      <div class="section" id="sec-reviews">
+        <div class="table-card">
+          <div class="table-hdr"><div class="table-title">All Reviews</div></div>
+          <div id="reviews-body"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- ANNOUNCEMENTS -->
+      <div class="section" id="sec-announcements">
+        <div class="table-card" style="overflow:visible">
+          <div class="table-hdr"><div class="table-title">Send Announcement</div></div>
+          <div style="padding:18px">
+            <div class="announce-form">
+              <label class="modal-label">Type</label>
+              <div class="type-btns">
+                <button class="type-btn on" id="type-info" onclick="setAnnType('info')">ℹ️ Info</button>
+                <button class="type-btn" id="type-promo" onclick="setAnnType('promo')">🎉 Promo</button>
+                <button class="type-btn" id="type-warning" onclick="setAnnType('warning')">⚠️ Warning</button>
+              </div>
+              <label class="modal-label">Title</label>
+              <input class="modal-input" id="ann-title" placeholder="e.g. Welcome to Loak.kh!"/>
+              <label class="modal-label">Message</label>
+              <textarea class="modal-input" id="ann-body" placeholder="Write your announcement…" style="resize:none;height:80px;margin-top:0"></textarea>
+              <div style="display:flex;gap:10px;margin-top:14px">
+                <button onclick="sendAnnouncement()" style="height:42px;background:var(--terra);color:#fff;border:none;border-radius:10px;padding:0 24px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Sora',sans-serif">📢 Publish</button>
+                <div style="font-size:12px;color:var(--ink3);align-self:center">Appears on the app for all users</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="table-card">
+          <div class="table-hdr"><div class="table-title">Active Announcements</div></div>
+          <div id="announcements-body"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- MESSAGES -->
+      <div class="section" id="sec-messages">
+        <div class="table-card">
+          <div class="table-hdr"><div class="table-title">All Conversations</div><input class="search-mini" id="msg-search" placeholder="Search…" oninput="filterMessages()"/></div>
+          <div id="messages-body"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- CONVERSATION MODAL -->
+<div class="modal-overlay" id="conv-modal" onclick="closeConvModal()">
+  <div class="modal-box" onclick="event.stopPropagation()" style="width:560px">
+    <div class="modal-h" id="conv-modal-title">Conversation</div>
+    <div class="modal-sub" id="conv-modal-sub"></div>
+    <div class="conv-msgs" id="conv-msgs"><div class="spinner"></div></div>
+    <div class="modal-footer"><button class="modal-cancel" onclick="closeConvModal()">Close</button></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+const SUPA_URL="https://jbmasntcwiqdsrgwqdir.supabase.co";
+const SUPA_KEY="sb_publishable_sfAK8TbCQ_0w0YeC3jxj_Q_R8jg2LZd";
+const SITE="https://loak-kh-git-main-khemara-s-projects.vercel.app/admin.html";
+
+let db,session_,allListings=[],allUsers=[],allMessages=[],annType_="info",currentSection_="dashboard";
+
+const ago=ts=>{const s=Math.floor((Date.now()-new Date(ts))/1000);if(s<60)return"just now";if(s<3600)return Math.floor(s/60)+"m ago";if(s<86400)return Math.floor(s/3600)+"h ago";return Math.floor(s/86400)+"d ago";};
+const initials=n=>(n||"?").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
+const fmtUSD=p=>"$"+Number(p||0).toFixed(0);
+
+function toast(msg,color="#1a7a4a"){const t=document.createElement("div");t.className="toast";t.style.background=color;t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3000);}
+
+// ── AUTH ──────────────────────────────────────────────────────
+window.addEventListener("load",()=>{
+  db=window.supabase.createClient(SUPA_URL,SUPA_KEY);
+  db.auth.onAuthStateChange((e,sess)=>{if(sess){session_=sess;checkAdmin();}else{session_=null;showLogin();}});
+  db.auth.getSession().then(({data})=>{if(data?.session){session_=data.session;checkAdmin();}else showLogin();});
+});
+
+function showLogin(){document.getElementById("login-screen").classList.remove("hidden");document.getElementById("admin").classList.remove("show");}
+
+async function checkAdmin(){
+  const {data}=await db.from("profiles").select("is_admin,full_name,avatar_url").eq("id",session_.user.id).single();
+  if(!data?.is_admin){document.getElementById("login-err").textContent="Access denied — admin only.";await db.auth.signOut();return;}
+  document.getElementById("login-screen").classList.add("hidden");
+  document.getElementById("admin").classList.add("show");
+  const name=data.full_name||session_.user.email;
+  document.getElementById("sidebar-name").textContent=name;
+  const av=document.getElementById("sidebar-av");
+  if(data.avatar_url){av.style.backgroundImage=`url(${data.avatar_url})`;av.style.backgroundSize="cover";}
+  else av.textContent=initials(name);
+  loadDashboard();
+}
+
+document.getElementById("login-btn").addEventListener("click",async()=>{
+  const btn=document.getElementById("login-btn");btn.disabled=true;btn.textContent="Opening Google…";
+  const {error}=await db.auth.signInWithOAuth({provider:"google",options:{redirectTo:SITE,queryParams:{prompt:"select_account"}}});
+  if(error){document.getElementById("login-err").textContent=error.message;btn.disabled=false;btn.textContent="Sign in with Google";}
+});
+
+async function signOut(){await db.auth.signOut();localStorage.removeItem("sb-jbmasntcwiqdsrgwqdir-auth-token");window.location.reload();}
+
+// ── NAV ───────────────────────────────────────────────────────
+const TITLES={dashboard:"Dashboard",listings:"Listings",users:"Users",reports:"Reports",reviews:"Reviews",announcements:"Announcements",messages:"Messages"};
+
+function showSection(sec){
+  currentSection_=sec;
+  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
+  document.getElementById("sec-"+sec).classList.add("active");
+  document.querySelector(`.nav-btn[onclick="showSection('${sec}')"]`).classList.add("active");
+  document.getElementById("topbar-title").textContent=TITLES[sec];
+  document.getElementById("export-btn").style.display=(sec==="listings"||sec==="users")?"flex":"none";
+  const loaders={dashboard:loadDashboard,listings:loadListings,users:loadUsers,reports:loadReports,reviews:loadReviews,announcements:loadAnnouncements,messages:loadMessages};
+  if(loaders[sec])loaders[sec]();
+}
+function refreshCurrent(){showSection(currentSection_);}
+
+// ── DASHBOARD ─────────────────────────────────────────────────
+async function loadDashboard(){
+  const [u,l,s,r]=await Promise.all([
+    db.from("profiles").select("id",{count:"exact",head:true}),
+    db.from("listings").select("id",{count:"exact",head:true}).eq("status","active"),
+    db.from("listings").select("id",{count:"exact",head:true}).eq("status","sold"),
+    db.from("reports").select("id",{count:"exact",head:true})
+  ]);
+  document.getElementById("stat-users").textContent=u.count||0;
+  document.getElementById("stat-listings").textContent=l.count||0;
+  document.getElementById("stat-sold").textContent=s.count||0;
+  document.getElementById("stat-reports").textContent=r.count||0;
+  document.getElementById("report-count").textContent=r.count||0;
+
+  const {data:rl}=await db.from("listings").select("id,title,price,category,status,featured,created_at,profiles!listings_seller_id_fkey(full_name),listing_photos(url)").order("created_at",{ascending:false}).limit(6);
+  document.getElementById("recent-listings-body").innerHTML=renderListingsTable(rl||[]);
+
+  const {data:ru}=await db.from("profiles").select("*").order("created_at",{ascending:false}).limit(6);
+  document.getElementById("recent-users-body").innerHTML=renderUsersTable(ru||[]);
+}
+
+// ── LISTINGS ─────────────────────────────────────────────────
+async function loadListings(){
+  document.getElementById("listings-body").innerHTML='<div class="spinner"></div>';
+  const status=document.getElementById("listing-status-filter").value;
+  let q=db.from("listings").select("id,title,price,price_khr,category,condition,status,location,featured,created_at,profiles!listings_seller_id_fkey(id,full_name),listing_photos(url)").order("featured",{ascending:false}).order("created_at",{ascending:false});
+  if(status)q=q.eq("status",status);
+  const {data}=await q;
+  allListings=data||[];
+  document.getElementById("listings-body").innerHTML=renderListingsTable(allListings,true);
+}
+
+function filterListings(){
+  const q=document.getElementById("listing-search").value.toLowerCase();
+  const fl=allListings.filter(l=>l.title?.toLowerCase().includes(q)||(l.profiles?.full_name||"").toLowerCase().includes(q)||(l.location||"").toLowerCase().includes(q));
+  document.getElementById("listings-body").innerHTML=renderListingsTable(fl,true);
+}
+
+function renderListingsTable(listings,showActions=false){
+  if(!listings.length)return'<div class="empty-row">No listings found</div>';
+  return`<table><thead><tr><th>Item</th><th>Seller</th><th>Price</th><th>Status</th><th>Listed</th>${showActions?"<th>Actions</th>":""}</tr></thead><tbody>${
+    listings.map(l=>{
+      const cover=l.listing_photos?.[0]?.url;
+      const sb=l.status==="active"?"bg":l.status==="sold"?"bo":"bk";
+      return`<tr>
+        <td><div style="display:flex;align-items:center;gap:10px">
+          ${cover?`<img class="td-img" src="${cover}"/>`:`<div class="td-img" style="display:flex;align-items:center;justify-content:center;font-size:18px">📦</div>`}
+          <div><div style="font-weight:600;color:var(--ink);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.title||"—"}</div>
+          ${l.featured?'<span class="badge bp">⭐ Featured</span>':''}
+          </div></div></td>
+        <td style="font-size:12px">${l.profiles?.full_name||"—"}</td>
+        <td style="font-weight:700;color:#B84A24">${fmtUSD(l.price)}</td>
+        <td><span class="badge ${sb}">${l.status}</span></td>
+        <td style="color:var(--ink4);font-size:12px">${ago(l.created_at)}</td>
+        ${showActions?`<td><div class="td-actions">
+          ${l.status==="deleted"?`<button class="action-btn abg" onclick="adminRestore('${l.id}')">Restore</button>`:`<button class="action-btn abr" onclick="adminDelete('${l.id}')">Delete</button>`}
+          ${l.status==="active"?`<button class="action-btn abk" onclick="adminMarkSold('${l.id}')">Sold</button>`:""}
+          ${!l.featured&&l.status==="active"?`<button class="action-btn abp" onclick="adminFeature('${l.id}',true)">⭐ Feature</button>`:""}
+          ${l.featured?`<button class="action-btn abk" onclick="adminFeature('${l.id}',false)">Unfeature</button>`:""}
+        </div></td>`:""}
+      </tr>`;
+    }).join("")
+  }</tbody></table>`;
+}
+
+async function adminDelete(id){if(!confirm("Delete this listing?"))return;await db.from("listings").update({status:"deleted"}).eq("id",id);toast("Deleted","#c0392b");loadListings();}
+async function adminRestore(id){await db.from("listings").update({status:"active"}).eq("id",id);toast("Listing restored ✓","#1a7a4a");loadListings();}
+async function adminMarkSold(id){await db.from("listings").update({status:"sold"}).eq("id",id);toast("Marked as sold","#C9963A");loadListings();}
+async function adminFeature(id,val){await db.from("listings").update({featured:val,featured_at:val?new Date().toISOString():null}).eq("id",id);toast(val?"⭐ Featured!":"Unfeatured","#6b2d8b");loadListings();}
+
+// ── USERS ─────────────────────────────────────────────────────
+async function loadUsers(){
+  document.getElementById("users-body").innerHTML='<div class="spinner"></div>';
+  const {data}=await db.from("profiles").select("*").order("created_at",{ascending:false});
+  allUsers=data||[];
+  document.getElementById("users-body").innerHTML=renderUsersTable(allUsers,true);
+}
+
+function filterUsers(){
+  const q=document.getElementById("user-search").value.toLowerCase();
+  const fl=allUsers.filter(u=>(u.full_name||"").toLowerCase().includes(q)||(u.location||"").toLowerCase().includes(q));
+  document.getElementById("users-body").innerHTML=renderUsersTable(fl,true);
+}
+
+function renderUsersTable(users,showActions=false){
+  if(!users.length)return'<div class="empty-row">No users found</div>';
+  return`<table><thead><tr><th>User</th><th>City</th><th>Rating</th><th>Followers</th><th>Joined</th>${showActions?"<th>Actions</th>":""}</tr></thead><tbody>${
+    users.map(u=>{
+      const av=u.avatar_url?`<img style="width:30px;height:30px;border-radius:50%;object-fit:cover" src="${u.avatar_url}"/>`
+        :`<div class="td-av" style="background:linear-gradient(135deg,#B84A24,#C9963A)">${initials(u.full_name)}</div>`;
+      return`<tr>
+        <td><div style="display:flex;align-items:center;gap:10px">${av}
+          <div><div style="font-weight:600;color:var(--ink)">${u.full_name||"—"}</div>
+          <div style="display:flex;gap:4px;margin-top:2px">
+            ${u.is_admin?'<span class="badge br">Admin</span>':""}
+            ${u.verified?'<span class="badge bg">✓ Verified</span>':""}
+          </div></div></div></td>
+        <td style="font-size:12px">${u.location||"—"}</td>
+        <td>⭐ ${Number(u.rating||5).toFixed(1)}</td>
+        <td>${u.followers_count||0}</td>
+        <td style="color:var(--ink4);font-size:12px">${ago(u.created_at)}</td>
+        ${showActions?`<td><div class="td-actions">
+          ${!u.verified?`<button class="action-btn abg" onclick="adminVerify('${u.id}',true)">✓ Verify</button>`:
+            `<button class="action-btn abk" onclick="adminVerify('${u.id}',false)">Unverify</button>`}
+          ${!u.is_admin?`<button class="action-btn abr" onclick="adminBan('${u.id}','${(u.full_name||"").replace(/'/g,"\\'")}')">Ban</button>`:""}
+        </div></td>`:""}
+      </tr>`;
+    }).join("")
+  }</tbody></table>`;
+}
+
+async function adminVerify(id,val){await db.from("profiles").update({verified:val}).eq("id",id);toast(val?"✓ Seller verified":"Verification removed",val?"#1a7a4a":"#C9963A");loadUsers();}
+async function adminBan(id,name){
+  if(!confirm(`Ban ${name}?\nThis will delete all their listings.`))return;
+  await db.from("listings").update({status:"deleted"}).eq("seller_id",id);
+  toast(`${name} banned`,"#c0392b");loadUsers();
+}
+
+// ── REPORTS ──────────────────────────────────────────────────
+async function loadReports(){
+  document.getElementById("reports-body").innerHTML='<div class="spinner"></div>';
+  const {data}=await db.from("reports").select("*,reporter:profiles!reports_reporter_id_fkey(full_name),listing:listings(id,title,status)").order("created_at",{ascending:false});
+  const reports=data||[];
+  document.getElementById("report-count").textContent=reports.length;
+  if(!reports.length){document.getElementById("reports-body").innerHTML='<div class="empty-row">No reports 🎉 All clean!</div>';return;}
+  document.getElementById("reports-body").innerHTML=`<div>${reports.map(r=>`
+    <div style="padding:14px 18px;border-bottom:1px solid var(--cream2);display:flex;align-items:flex-start;gap:14px">
+      <div style="font-size:22px">🚨</div>
+      <div style="flex:1">
+        <div style="font-weight:700;color:var(--ink);margin-bottom:2px">${r.listing?.title||"Deleted listing"}</div>
+        <div style="font-size:11px;color:var(--ink4)">Reported by <strong>${r.reporter?.full_name||"User"}</strong> · ${ago(r.created_at)}</div>
+        <div style="display:inline-block;background:var(--cream2);border-radius:5px;padding:2px 8px;font-size:11px;font-weight:600;color:var(--ink2);margin-top:5px">${r.reason}</div>
+      </div>
+      <div class="td-actions">
+        ${r.listing?.status!=="deleted"?`<button class="action-btn abr" onclick="adminDelete('${r.listing?.id}');adminDismissReport('${r.id}')">Delete listing</button>`:'<span class="badge bk">Already deleted</span>'}
+        <button class="action-btn abk" onclick="adminDismissReport('${r.id}')">Dismiss</button>
+      </div>
+    </div>`).join("")}</div>`;
+}
+async function adminDismissReport(id){await db.from("reports").delete().eq("id",id);toast("Report dismissed");loadReports();}
+
+// ── REVIEWS ──────────────────────────────────────────────────
+async function loadReviews(){
+  document.getElementById("reviews-body").innerHTML='<div class="spinner"></div>';
+  const {data}=await db.from("reviews").select("*,reviewer:profiles!reviews_reviewer_id_fkey(full_name),seller:profiles!reviews_seller_id_fkey(full_name)").order("created_at",{ascending:false});
+  if(!data?.length){document.getElementById("reviews-body").innerHTML='<div class="empty-row">No reviews yet</div>';return;}
+  document.getElementById("reviews-body").innerHTML=`<table><thead><tr><th>Reviewer</th><th>Seller</th><th>Rating</th><th>Comment</th><th>Date</th><th>Actions</th></tr></thead><tbody>${
+    data.map(r=>`<tr>
+      <td style="font-weight:600">${r.reviewer?.full_name||"—"}</td>
+      <td>${r.seller?.full_name||"—"}</td>
+      <td>${"⭐".repeat(r.rating||0)}</td>
+      <td style="color:var(--ink3);max-width:200px">${r.comment||"—"}</td>
+      <td style="color:var(--ink4);font-size:12px">${ago(r.created_at)}</td>
+      <td><button class="action-btn abr" onclick="adminDeleteReview('${r.id}')">Delete</button></td>
+    </tr>`).join("")
+  }</tbody></table>`;
+}
+async function adminDeleteReview(id){if(!confirm("Delete this review?"))return;await db.from("reviews").delete().eq("id",id);toast("Review deleted","#c0392b");loadReviews();}
+
+// ── ANNOUNCEMENTS ─────────────────────────────────────────────
+function setAnnType(type){
+  annType_=type;
+  ["info","promo","warning"].forEach(t=>{
+    document.getElementById("type-"+t).className="type-btn"+(t===type?" on":"");
+  });
+}
+
+async function sendAnnouncement(){
+  const title=document.getElementById("ann-title").value.trim();
+  const body=document.getElementById("ann-body").value.trim();
+  if(!title||!body){toast("Add a title and message","#c0392b");return;}
+  const {error}=await db.from("announcements").insert({title,body,type:annType_,active:true});
+  if(error){toast("Error: "+error.message,"#c0392b");return;}
+  toast("Announcement published! 📢","#1a7a4a");
+  document.getElementById("ann-title").value="";
+  document.getElementById("ann-body").value="";
+  loadAnnouncements();
+}
+
+async function loadAnnouncements(){
+  document.getElementById("announcements-body").innerHTML='<div class="spinner"></div>';
+  const {data}=await db.from("announcements").select("*").order("created_at",{ascending:false});
+  if(!data?.length){document.getElementById("announcements-body").innerHTML='<div class="empty-row">No announcements yet</div>';return;}
+  const typeEmoji={info:"ℹ️",promo:"🎉",warning:"⚠️"};
+  const typeBadge={info:"bb",promo:"bg",warning:"bo"};
+  document.getElementById("announcements-body").innerHTML=`<div>${data.map(a=>`
+    <div style="padding:14px 18px;border-bottom:1px solid var(--cream2);display:flex;align-items:center;gap:14px">
+      <div style="font-size:22px">${typeEmoji[a.type]||"ℹ️"}</div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+          <div style="font-weight:700;color:var(--ink)">${a.title}</div>
+          <span class="badge ${typeBadge[a.type]||"bb"}">${a.type}</span>
+          ${!a.active?'<span class="badge bk">Hidden</span>':''}
+        </div>
+        <div style="font-size:13px;color:var(--ink3)">${a.body}</div>
+        <div style="font-size:11px;color:var(--ink4);margin-top:3px">${ago(a.created_at)}</div>
+      </div>
+      <div class="td-actions">
+        <button class="action-btn ${a.active?"abk":"abg"}" onclick="toggleAnnouncement('${a.id}',${!a.active})">${a.active?"Hide":"Show"}</button>
+        <button class="action-btn abr" onclick="deleteAnnouncement('${a.id}')">Delete</button>
+      </div>
+    </div>`).join("")}</div>`;
+}
+async function toggleAnnouncement(id,val){await db.from("announcements").update({active:val}).eq("id",id);loadAnnouncements();}
+async function deleteAnnouncement(id){if(!confirm("Delete this announcement?"))return;await db.from("announcements").delete().eq("id",id);toast("Deleted","#c0392b");loadAnnouncements();}
+
+// ── MESSAGES ─────────────────────────────────────────────────
+async function loadMessages(){
+  document.getElementById("messages-body").innerHTML='<div class="spinner"></div>';
+  const {data}=await db.from("conversations").select("*,listing:listings(title),buyer:profiles!conversations_buyer_id_fkey(full_name),seller:profiles!conversations_seller_id_fkey(full_name)").order("last_at",{ascending:false}).limit(100);
+  allMessages=data||[];
+  renderMessagesTable(allMessages);
+}
+
+function filterMessages(){
+  const q=document.getElementById("msg-search").value.toLowerCase();
+  const fl=allMessages.filter(c=>(c.buyer?.full_name||"").toLowerCase().includes(q)||(c.seller?.full_name||"").toLowerCase().includes(q)||(c.listing?.title||"").toLowerCase().includes(q));
+  renderMessagesTable(fl);
+}
+
+function renderMessagesTable(convs){
+  if(!convs.length){document.getElementById("messages-body").innerHTML='<div class="empty-row">No conversations</div>';return;}
+  document.getElementById("messages-body").innerHTML=`<table><thead><tr><th>Buyer</th><th>Seller</th><th>Listing</th><th>Last message</th><th>Time</th><th>View</th></tr></thead><tbody>${
+    convs.map(c=>`<tr>
+      <td style="font-weight:600">${c.buyer?.full_name||"—"}</td>
+      <td>${c.seller?.full_name||"—"}</td>
+      <td style="color:var(--ink3);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.listing?.title||"—"}</td>
+      <td style="color:var(--ink3);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.last_message||"—"}</td>
+      <td style="color:var(--ink4);font-size:12px">${ago(c.last_at)}</td>
+      <td><button class="action-btn abb" onclick="viewConversation('${c.id}','${(c.buyer?.full_name||"").replace(/'/g,"\\'")}','${(c.seller?.full_name||"").replace(/'/g,"\\'")}','${(c.listing?.title||"").replace(/'/g,"\\'")}')">View</button></td>
+    </tr>`).join("")
+  }</tbody></table>`;
+}
+
+async function viewConversation(id,buyer,seller,listing){
+  document.getElementById("conv-modal-title").textContent=`${buyer} → ${seller}`;
+  document.getElementById("conv-modal-sub").textContent=`Re: ${listing}`;
+  document.getElementById("conv-msgs").innerHTML='<div class="spinner"></div>';
+  document.getElementById("conv-modal").classList.add("show");
+  const {data}=await db.from("messages").select("*").eq("conversation_id",id).order("created_at");
+  if(!data?.length){document.getElementById("conv-msgs").innerHTML='<div style="text-align:center;color:var(--ink4);padding:20px">No messages</div>';return;}
+  // We don't know which side is left/right without session, alternate
+  document.getElementById("conv-msgs").innerHTML=data.map((m,i)=>`
+    <div class="msg-bubble ${i%2===0?"left":"right"}">
+      ${m.body}
+      <div class="msg-meta">${ago(m.created_at)}</div>
+    </div>`).join("");
+}
+function closeConvModal(){document.getElementById("conv-modal").classList.remove("show");}
+
+// ── EXPORT CSV ────────────────────────────────────────────────
+function exportCSV(){
+  if(currentSection_==="listings"){
+    const rows=[["Title","Seller","Price","Category","Status","Location","Listed"],...allListings.map(l=>[l.title||"",l.profiles?.full_name||"",l.price||0,l.category||"",l.status||"",l.location||"",l.created_at||""])];
+    downloadCSV(rows,"loak-kh-listings.csv");
+  } else if(currentSection_==="users"){
+    const rows=[["Name","Location","Rating","Followers","Joined"],...allUsers.map(u=>[u.full_name||"",u.location||"",u.rating||5,u.followers_count||0,u.created_at||""])];
+    downloadCSV(rows,"loak-kh-users.csv");
+  }
+}
+
+function downloadCSV(rows,filename){
+  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const blob=new Blob([csv],{type:"text/csv"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=filename;a.click();
+  toast("CSV downloaded ✓","#1a7a4a");
+}
+</script>
+</body>
+</html>
