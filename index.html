@@ -1580,44 +1580,73 @@ async function startGlobalMsgListener(){
 }
 
 function subscribeToAllConvs(){
-  // Remove old channels
+  // Clean up old channels
   if(window._globalChans){
-    window._globalChans.forEach(ch=>db.removeChannel(ch));
+    window._globalChans.forEach(ch=>{ try{db.removeChannel(ch);}catch(e){} });
+    window._globalChans=[];
   }
-  window._globalChans = [];
-
-  if(!convs_.length){ console.log("No convs to subscribe to"); return; }
-
-  console.log("Subscribing to", convs_.length, "conversations for notifications");
+  window._globalChans=[];
+  if(!convs_.length) return;
+  console.log("Setting up notif subscriptions for",convs_.length,"convs");
 
   convs_.forEach(conv=>{
-    // Skip if this is the currently open chat
-    const ch = db.channel("notif:"+conv.id)
+    const ch=db.channel("notif-"+conv.id)
       .on("postgres_changes",{
         event:"INSERT",
         schema:"public",
         table:"messages",
         filter:"conversation_id=eq."+conv.id
-      }, payload=>{
-        const msg = payload.new;
-        if(!msg) return;
-        if(msg.sender_id === session_.user.id) return; // skip own
-        if(activeConv_ && activeConv_.id === conv.id) return; // skip if open
-        // Update conv
-        conv.last_message = msg.message_type==="image"?"📷 Photo":msg.message_type==="audio"?"🎤 Voice":msg.body||"";
-        conv.last_at = msg.created_at;
-        // Track unread
+      },payload=>{
+        const msg=payload.new;
+        if(!msg||msg.sender_id===session_?.user.id) return;
+        if(activeConv_?.id===conv.id) return; // already in this chat
+        console.log("🔔 NEW MSG from other user in conv:",conv.id.slice(0,8));
+        // Update conv in memory
+        const c=convs_.find(x=>x.id===conv.id);
+        if(c){
+          c.last_message=msg.message_type==="image"?"📷 Photo":msg.message_type==="audio"?"🎤 Voice":(msg.body||"");
+          c.last_at=msg.created_at;
+        }
         unreadCount_++;
         unreadConvs_.add(conv.id);
         showChatBadge(unreadCount_);
-        showInAppNotif(msg, conv);
+        showInAppNotif(msg,c||conv);
         if(curTab==="messages") renderConvList();
       })
-      .subscribe(status=>{
-        if(status==="SUBSCRIBED") console.log("✅ Notif listening on conv:", conv.id.slice(0,8));
-      });
+      .subscribe(s=>console.log("notif-"+conv.id.slice(0,6)+":",s));
     window._globalChans.push(ch);
   });
+}
+
+// Polling fallback — check for new messages every 15 seconds
+let _lastPollAt = new Date().toISOString();
+function startPolling(){
+  setInterval(async()=>{
+    if(!session_||!convs_.length) return;
+    // Check if any conv has new messages since last poll
+    const {data}=await db.from("messages")
+      .select("id,conversation_id,sender_id,body,message_type,created_at")
+      .neq("sender_id",session_.user.id)
+      .gt("created_at",_lastPollAt)
+      .order("created_at",{ascending:false})
+      .limit(10);
+    _lastPollAt=new Date().toISOString();
+    if(!data||!data.length) return;
+    data.forEach(msg=>{
+      const conv=convs_.find(c=>c.id===msg.conversation_id);
+      if(!conv) return; // not my conv
+      if(activeConv_?.id===msg.conversation_id) return; // already open
+      if(unreadConvs_.has(msg.conversation_id)) return; // already notified
+      console.log("📬 Poll found new message:", msg.body);
+      conv.last_message=msg.message_type==="image"?"📷 Photo":msg.message_type==="audio"?"🎤 Voice":(msg.body||"");
+      conv.last_at=msg.created_at;
+      unreadCount_++;
+      unreadConvs_.add(conv.id);
+      showChatBadge(unreadCount_);
+      showInAppNotif(msg,conv);
+      if(curTab==="messages") renderConvList();
+    });
+  },8000); // poll every 8 seconds
 }
 
 function showChatBadge(count){
