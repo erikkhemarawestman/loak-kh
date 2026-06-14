@@ -1548,6 +1548,82 @@ async function openConvById(id){
   });
 }
 
+
+// ── MEDIA VARIABLES ──────────────────────────────────────────
+let mediaRecorder_=null, audioChunks_=[], voiceTimer_=null, voiceSeconds_=0;
+
+// Send image in chat
+async function sendImage(inp){
+  if(!inp||!inp.files||!inp.files[0]||!activeConv_)return;
+  const file=inp.files[0];inp.value="";
+  const tempId="t"+Date.now();
+  const tempUrl=URL.createObjectURL(file);
+  const temp={id:tempId,sender_id:session_.user.id,message_type:"image",image_url:tempUrl,body:"",created_at:new Date().toISOString()};
+  msgs_.push(temp);renderChatMsgs();
+  const ext=file.name.split(".").pop()||"jpg";
+  const path=session_.user.id+"/"+activeConv_.id+"/img-"+Date.now()+"."+ext;
+  const {error:ue}=await db.storage.from("message-media").upload(path,file);
+  if(ue){msgs_=msgs_.filter(m=>m.id!==tempId);renderChatMsgs();toast("Upload failed","var(--terra)");return;}
+  const {data:{publicUrl}}=db.storage.from("message-media").getPublicUrl(path);
+  const {data,error}=await db.from("messages").insert({conversation_id:activeConv_.id,sender_id:session_.user.id,body:"📷 Photo",image_url:publicUrl,message_type:"image"}).select().single();
+  if(error){msgs_=msgs_.filter(m=>m.id!==tempId);renderChatMsgs();toast("Failed to send","var(--terra)");}
+  else{const idx=msgs_.findIndex(m=>m.id===tempId);if(idx>-1)msgs_[idx]=data;}
+}
+
+// Toggle voice recording
+function toggleVoice(){
+  if(mediaRecorder_&&mediaRecorder_.state==="recording"){cancelVoice();return;}
+  navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
+    mediaRecorder_=new MediaRecorder(stream);
+    audioChunks_=[];
+    mediaRecorder_.ondataavailable=e=>{ if(e.data.size>0)audioChunks_.push(e.data); };
+    mediaRecorder_.start(100);
+    const rec=document.getElementById("voice-recorder");
+    const inp=document.getElementById("chat-inp-area");
+    if(rec)rec.style.display="flex";
+    if(inp)inp.style.display="none";
+    voiceSeconds_=0;
+    voiceTimer_=setInterval(()=>{
+      voiceSeconds_++;
+      const m=Math.floor(voiceSeconds_/60);
+      const s=voiceSeconds_%60;
+      const timer=document.getElementById("voice-timer");
+      const progress=document.getElementById("voice-progress");
+      if(timer)timer.textContent=m+":"+(s<10?"0":"")+s;
+      if(progress)progress.style.width=Math.min(voiceSeconds_/120*100,100)+"%";
+    },1000);
+  }).catch(()=>toast("Microphone access denied","var(--terra)"));
+}
+
+function cancelVoice(){
+  if(mediaRecorder_){try{mediaRecorder_.stream.getTracks().forEach(t=>t.stop());}catch(e){}mediaRecorder_=null;}
+  clearInterval(voiceTimer_);audioChunks_=[];
+  const rec=document.getElementById("voice-recorder");
+  const inp=document.getElementById("chat-inp-area");
+  if(rec)rec.style.display="none";
+  if(inp)inp.style.display="flex";
+}
+
+async function sendVoice(){
+  if(!mediaRecorder_||audioChunks_.length===0)return;
+  clearInterval(voiceTimer_);
+  mediaRecorder_.stop();
+  await new Promise(r=>{mediaRecorder_.onstop=r;setTimeout(r,500);});
+  const blob=new Blob(audioChunks_,{type:"audio/webm"});
+  cancelVoice();
+  if(blob.size===0){toast("Recording too short","var(--terra)");return;}
+  const tempId="t"+Date.now();
+  const temp={id:tempId,sender_id:session_.user.id,message_type:"audio",audio_url:URL.createObjectURL(blob),body:"",created_at:new Date().toISOString()};
+  msgs_.push(temp);renderChatMsgs();
+  const path=session_.user.id+"/"+activeConv_.id+"/voice-"+Date.now()+".webm";
+  const {error:ue}=await db.storage.from("message-media").upload(path,blob,{contentType:"audio/webm"});
+  if(ue){msgs_=msgs_.filter(m=>m.id!==tempId);renderChatMsgs();toast("Upload failed","var(--terra)");return;}
+  const {data:{publicUrl}}=db.storage.from("message-media").getPublicUrl(path);
+  const {data,error}=await db.from("messages").insert({conversation_id:activeConv_.id,sender_id:session_.user.id,body:"🎤 Voice message",audio_url:publicUrl,message_type:"audio"}).select().single();
+  if(error){msgs_=msgs_.filter(m=>m.id!==tempId);renderChatMsgs();toast("Failed to send","var(--terra)");}
+  else{const idx=msgs_.findIndex(m=>m.id===tempId);if(idx>-1)msgs_[idx]=data;}
+}
+
 function renderChatMsgs(){
   const el=document.getElementById("chat-msgs");if(!el)return;
   if(!msgs_.length){
