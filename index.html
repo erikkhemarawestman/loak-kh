@@ -609,7 +609,7 @@ button,input,select,textarea{font-family:'Sora',sans-serif}
     <button class="bnav-btn" id="nav-messages" onclick="switchTab('messages')">
       <div class="bnav-ico" style="position:relative">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z"/></svg>
-        <div id="chat-badge" style="display:none;position:absolute;top:-4px;right:-4px;width:16px;height:16px;background:var(--terra);border-radius:50%;font-size:9px;font-weight:800;color:#fff;display:none;align-items:center;justify-content:center;border:2px solid var(--cream)"></div>
+        <div id="chat-badge" style="display:none;position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;background:var(--terra);border-radius:8px;font-size:9px;font-weight:800;color:#fff;align-items:center;justify-content:center;border:2px solid #fff;padding:0 3px"></div>
       </div>
       <span class="bnav-lbl">Chat</span>
     </button>
@@ -1470,16 +1470,20 @@ function renderConvList(){
       : '<div class="conv-av">'+initials(other?.full_name||"?")+'</div>';
 
     const lastMsg = c.last_message||"No messages yet";
-    const isUnread = !c.last_message ? false : false; // future unread tracking
+    // unread tracked via unreadConvs_ set
 
+    const isUnread = unreadConvs_.has(c.id);
     div.innerHTML = av +
       '<div class="conv-info">'+
-        '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px">'+
-          '<div class="conv-name">'+(other?.full_name||"User")+'</div>'+
-          '<div class="conv-time">'+ago(c.last_at)+'</div>'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">'+
+          '<div class="conv-name" style="font-weight:'+(isUnread?'800':'700')+';color:'+(isUnread?'var(--ink)':'var(--ink)')+'">'+( other?.full_name||"User")+'</div>'+
+          '<div style="display:flex;align-items:center;gap:5px">'+
+            '<div class="conv-time">'+ago(c.last_at)+'</div>'+
+            (isUnread?'<div style="width:8px;height:8px;border-radius:50%;background:var(--terra);flex-shrink:0"></div>':'')+
+          '</div>'+
         '</div>'+
         (listingTitle?'<div class="conv-listing">'+listingTitle+'</div>':'')+
-        '<div class="conv-last">'+lastMsg+'</div>'+
+        '<div class="conv-last" style="font-weight:'+(isUnread?'600':'400')+';color:'+(isUnread?'var(--ink2)':'var(--ink3)')+'">'+lastMsg+'</div>'+
       '</div>';
     el.appendChild(div);
   });
@@ -1497,6 +1501,13 @@ async function openConv(listingId){
 }
 
 async function openConvById(id){
+  // Mark this conv as read
+  if(unreadConvs_.has(id)){
+    unreadConvs_.delete(id);
+    unreadCount_ = Math.max(0, unreadCount_ - 1);
+    showChatBadge(unreadCount_);
+    renderConvList(); // refresh to remove bold
+  }
   activeConv_=convs_.find(c=>c.id===id)||{id};
   const {data}=await db.from("messages").select("*").eq("conversation_id",id).order("created_at");
   msgs_=data||[];
@@ -1554,6 +1565,7 @@ async function openConvById(id){
 
 // ── GLOBAL NOTIFICATIONS ──────────────────────────────────────
 let unreadCount_ = 0;
+let unreadConvs_ = new Set(); // track which convs have unread msgs
 
 async function startGlobalMsgListener(){
   if(!session_) return;
@@ -1585,8 +1597,9 @@ async function startGlobalMsgListener(){
       // Update conv last message
       conv.last_message = msg.body||"📷 Photo";
       conv.last_at = msg.created_at;
-      // Show notification
+      // Track unread
       unreadCount_++;
+      unreadConvs_.add(msg.conversation_id);
       showChatBadge(unreadCount_);
       showInAppNotif(msg, conv);
       if(curTab==="messages") renderConvList();
@@ -1600,10 +1613,11 @@ function showChatBadge(count){
   const badge = document.getElementById("chat-badge");
   if(!badge) return;
   if(count > 0){
-    badge.textContent = count > 9 ? "9+" : count;
+    badge.textContent = count > 99 ? "99+" : count;
     badge.style.display = "flex";
   } else {
     badge.style.display = "none";
+    badge.textContent = "";
   }
 }
 
@@ -1929,8 +1943,9 @@ function switchTab(tab){
     const nb=document.getElementById("nav-"+t);if(nb)nb.className="bnav-btn"+(t===tab?" active":"");
   });
   if(tab==="messages"){
-    renderConvList();fetchConvs();
-    unreadCount_=0;showChatBadge(0);
+    fetchConvs();
+    // Don't clear unread here — clear per conv when opened
+    renderConvList();
   }
   if(tab==="profile"){renderProfileHero();loadMyListings();}
 }
