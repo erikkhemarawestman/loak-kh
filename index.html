@@ -1618,35 +1618,53 @@ function subscribeToAllConvs(){
   });
 }
 
-// Polling fallback — check for new messages every 15 seconds
-let _lastPollAt = new Date().toISOString();
+// Polling — check conversations for updates every 5 seconds
+let _convLastAt = {};
 function startPolling(){
+  // Store initial last_at for each conv
+  convs_.forEach(c=>{ _convLastAt[c.id]=c.last_at; });
+
   setInterval(async()=>{
     if(!session_||!convs_.length) return;
-    // Check if any conv has new messages since last poll
-    const {data}=await db.from("messages")
-      .select("id,conversation_id,sender_id,body,message_type,created_at")
-      .neq("sender_id",session_.user.id)
-      .gt("created_at",_lastPollAt)
-      .order("created_at",{ascending:false})
-      .limit(10);
-    _lastPollAt=new Date().toISOString();
-    if(!data||!data.length) return;
-    data.forEach(msg=>{
-      const conv=convs_.find(c=>c.id===msg.conversation_id);
-      if(!conv) return; // not my conv
-      if(activeConv_?.id===msg.conversation_id) return; // already open
-      if(unreadConvs_.has(msg.conversation_id)) return; // already notified
-      console.log("📬 Poll found new message:", msg.body);
-      conv.last_message=msg.message_type==="image"?"📷 Photo":msg.message_type==="audio"?"🎤 Voice":(msg.body||"");
-      conv.last_at=msg.created_at;
-      unreadCount_++;
-      unreadConvs_.add(conv.id);
-      showChatBadge(unreadCount_);
-      showInAppNotif(msg,conv);
-      if(curTab==="messages") renderConvList();
+    // Fetch fresh conversation data to detect changes
+    const ids = convs_.map(c=>c.id);
+    const {data,error}=await db.from("conversations")
+      .select("id,last_message,last_at,buyer_id,seller_id")
+      .in("id",ids)
+      .order("last_at",{ascending:false});
+    if(error||!data) return;
+
+    data.forEach(fresh=>{
+      const prev=_convLastAt[fresh.id];
+      // Check if last_at changed = new message arrived
+      if(prev && fresh.last_at && fresh.last_at!==prev){
+        const conv=convs_.find(c=>c.id===fresh.id);
+        if(!conv) return;
+        if(activeConv_?.id===fresh.id) return; // currently open
+        if(unreadConvs_.has(fresh.id)) return; // already notified
+
+        console.log("📬 New message detected in conv:", fresh.id.slice(0,8));
+        // Update conv
+        conv.last_message=fresh.last_message||"";
+        conv.last_at=fresh.last_at;
+        // Show notification
+        unreadCount_++;
+        unreadConvs_.add(fresh.id);
+        showChatBadge(unreadCount_);
+        // Show popup
+        const iAmBuyer=conv.buyer_id===session_.user.id;
+        const otherName=iAmBuyer?conv.seller?.full_name:conv.buyer?.full_name;
+        showInAppNotif({
+          conversation_id:fresh.id,
+          body:fresh.last_message||"New message",
+          sender_id:"other"
+        },{...conv,other_name:otherName});
+        if(curTab==="messages") renderConvList();
+      }
+      // Update stored last_at
+      _convLastAt[fresh.id]=fresh.last_at;
     });
-  },8000); // poll every 8 seconds
+  },5000); // poll every 5 seconds
 }
 
 function showChatBadge(count){
@@ -1663,9 +1681,9 @@ function showChatBadge(count){
 
 function showInAppNotif(msg, conv){
   if(!conv) conv = convs_.find(c=>c.id===msg.conversation_id);
-  const senderName = conv
-    ? (conv.buyer_id===session_.user.id ? conv.seller?.full_name : conv.buyer?.full_name)
-    : "Someone";
+  const senderName = conv?.other_name ||
+    (conv ? (conv.buyer_id===session_.user.id ? conv.seller?.full_name : conv.buyer?.full_name) : null) ||
+    "Someone";
   const listing = conv?.listing?.title || "";
   // Show toast notification
   const notif = document.createElement("div");
