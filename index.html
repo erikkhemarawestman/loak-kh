@@ -1459,8 +1459,11 @@ function renderConvList(){
   el.innerHTML="";
   convs_.forEach(c=>{
     const iAmBuyer = c.buyer_id===session_?.user.id;
+    // If I'm buyer, other person is seller and vice versa
     const other = iAmBuyer ? c.seller : c.buyer;
     const listingTitle = c.listing?.title || "";
+    // Skip if other person is myself (shouldn't happen but just in case)
+    if(other?.id === session_?.user.id) return;
     const div=document.createElement("div");
     div.className="conv-item";
     div.onclick=()=>openConvById(c.id);
