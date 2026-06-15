@@ -291,15 +291,19 @@ button,input,select,textarea{font-family:'Sora',sans-serif}
 
 /* MESSAGES */
 .msgs-wrap{padding:20px 16px 90px}
-.msgs-h{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--ink);margin-bottom:20px}
-.conv-item{background:#fff;border-radius:14px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer;box-shadow:0 1px 3px rgba(20,18,16,.05),0 2px 8px rgba(20,18,16,.06);transition:all .15s}
+.msgs-h{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--ink);margin-bottom:14px;padding-top:4px}
+.conv-item{background:#fff;border-radius:14px;padding:12px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;cursor:pointer;box-shadow:0 1px 3px rgba(20,18,16,.05),0 2px 8px rgba(20,18,16,.06);transition:all .15s}
 .conv-item:active{transform:scale(.98);background:var(--cream2)}
+.conv-item-img{width:52px;height:52px;border-radius:10px;object-fit:cover;background:var(--cream2);flex-shrink:0;position:relative}
+.conv-item-img-wrap{position:relative;flex-shrink:0}
+.conv-av-small{position:absolute;bottom:-4px;right:-4px;width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,var(--terra),var(--gold));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:9px;border:2px solid #fff;overflow:hidden}
+.conv-av-small img{width:100%;height:100%;object-fit:cover}
 .conv-av{width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,var(--terra),var(--gold));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px;flex-shrink:0}
 .conv-info{flex:1;min-width:0}
-.conv-name{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:2px}
-.conv-listing{font-size:11px;color:var(--terra);font-weight:600;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.conv-name{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.conv-listing{font-size:11px;color:var(--terra);font-weight:600;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .conv-last{font-size:12px;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.conv-time{font-size:10px;color:var(--ink4);flex-shrink:0}
+.conv-time{font-size:10px;color:var(--ink4);flex-shrink:0;white-space:nowrap}
 .chat-view{display:none;flex-direction:column;height:calc(100vh - 118px)}
 .chat-hdr{background:#fff;padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0}
 .chat-back{border:none;background:none;cursor:pointer;font-size:22px;color:var(--ink2);padding:4px;line-height:1}
@@ -1508,17 +1512,40 @@ function renderConvList(){
     // unread tracked via unreadConvs_ set
 
     const isUnread = unreadConvs_.has(c.id);
-    div.innerHTML = av +
+    const iAmBuyerRole = c.buyer_id===session_?.user.id;
+    const listingPhoto = c.listing?.listing_photos?.[0]?.url;
+    const listingBg = 'linear-gradient(135deg,#E8D5C4,#C4956A)';
+
+    // Item photo with user avatar overlay
+    let imgWrap = '<div class="conv-item-img-wrap">';
+    if(listingPhoto){
+      imgWrap += '<img class="conv-item-img" src="'+listingPhoto+'" alt="'+listingTitle+'"/>';
+    } else {
+      imgWrap += '<div class="conv-item-img" style="background:'+listingBg+';display:flex;align-items:center;justify-content:center;font-size:22px">📦</div>';
+    }
+    // Other person avatar as overlay
+    if(other?.avatar_url){
+      imgWrap += '<div class="conv-av-small"><img src="'+other.avatar_url+'" alt=""/></div>';
+    } else {
+      imgWrap += '<div class="conv-av-small">'+initials(other?.full_name||"?")+'</div>';
+    }
+    imgWrap += '</div>';
+
+    // Who sent last message
+    const lastSenderMe = c.last_message && c.buyer_id===session_?.user.id === iAmBuyerRole;
+    const lastMsgDisplay = lastMsg==="No messages yet" ? lastMsg : (iAmBuyerRole ? "You: " : other?.full_name?.split(" ")[0]+": ")+lastMsg;
+
+    div.innerHTML = imgWrap +
       '<div class="conv-info">'+
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">'+
-          '<div class="conv-name" style="font-weight:'+(isUnread?'800':'700')+';color:'+(isUnread?'var(--ink)':'var(--ink)')+'">'+( other?.full_name||"User")+'</div>'+
-          '<div style="display:flex;align-items:center;gap:5px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">'+
+          '<div class="conv-name" style="font-weight:'+(isUnread?'800':'700')+'">'+(other?.full_name||"User")+'</div>'+
+          '<div style="display:flex;align-items:center;gap:4px;flex-shrink:0">'+
             '<div class="conv-time">'+ago(c.last_at)+'</div>'+
-            (isUnread?'<div style="width:8px;height:8px;border-radius:50%;background:var(--terra);flex-shrink:0"></div>':'')+
+            (isUnread?'<div style="width:7px;height:7px;border-radius:50%;background:var(--terra)"></div>':'')+
           '</div>'+
         '</div>'+
         (listingTitle?'<div class="conv-listing">'+listingTitle+'</div>':'')+
-        '<div class="conv-last" style="font-weight:'+(isUnread?'600':'400')+';color:'+(isUnread?'var(--ink2)':'var(--ink3)')+'">'+lastMsg+'</div>'+
+        '<div class="conv-last" style="font-weight:'+(isUnread?'600':'400')+';color:'+(isUnread?'var(--ink)':'var(--ink3)')+'">'+lastMsgDisplay+'</div>'+
       '</div>';
     el.appendChild(div);
   });
@@ -1882,15 +1909,22 @@ function renderChat(){
     ?'<img src="'+other.avatar_url+'" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;cursor:pointer"/>'
     :'<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--terra),var(--gold));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0">'+initials(other?.full_name||"?")+'</div>';
 
+  // Get listing photo for chat header
+  const chatListingPhoto = activeConv_?.listing?.listing_photos?.[0]?.url;
+  let chatItemThumb = '';
+  if(chatListingPhoto){
+    chatItemThumb = '<img src="'+chatListingPhoto+'" style="width:36px;height:36px;border-radius:8px;object-fit:cover;flex-shrink:0" alt="" id="chat-listing-thumb"/>';
+  }
   cv.innerHTML=
     '<div class="chat-hdr">'+
       '<button class="chat-back" onclick="closeChat()">&#8249;</button>'+
       av+
       '<div style="flex:1;min-width:0">'+
-        '<div style="font-weight:700;font-size:15px;color:var(--ink);letter-spacing:-.2px">'+(other?.full_name||"Seller")+'</div>'+
-        '<div class="chat-listing" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(activeConv_?.listing?.title||"")+'</div>'+
+        '<div style="font-weight:700;font-size:14px;color:var(--ink);letter-spacing:-.2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(other?.full_name||"Seller")+'</div>'+
+        '<div class="chat-listing" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px">'+(activeConv_?.listing?.title||"")+'</div>'+
       '</div>'+
-      '<button id="chat-profile-btn" style="background:none;border:none;font-size:11px;color:var(--ink3);cursor:pointer;font-weight:600">Profile</button>'+
+      chatItemThumb+
+      '<button id="chat-profile-btn" style="background:none;border:none;font-size:11px;color:var(--ink3);cursor:pointer;font-weight:600;flex-shrink:0">Profile</button>'+
     '</div>'+
     '<div class="chat-msgs" id="chat-msgs"></div>'+
     '<div class="chat-inp" id="chat-inp-area">'+
@@ -1909,6 +1943,8 @@ function renderChat(){
 
   const msgInp=cv.querySelector("#msg-inp");
   if(msgInp)msgInp.onkeydown=e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMsg();}};
+  const thumb=cv.querySelector("#chat-listing-thumb");
+  if(thumb)thumb.onclick=()=>switchTab("home");
   const photoBtn=cv.querySelector("#chat-photo-btn");
   const imgInp=cv.querySelector("#chat-img-inp");
   if(photoBtn&&imgInp){
